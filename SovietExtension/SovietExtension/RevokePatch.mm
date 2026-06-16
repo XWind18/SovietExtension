@@ -51,44 +51,25 @@ static uintptr_t YMWeChatDylibSlide = 0;
 //   LDR  X9, [X9,#off_91EAD20@PAGEOFF]
 //   CBZ  X9, loc_27A03B0
 //   BR   X9
-static const uintptr_t kOff_HandleSysMsgRevokeMsgHookPointerVA = 0x91EAD20;
+static const uintptr_t kOff_HandleSysMsgRevokeMsgHookPointerVA = 0x91EAD20;//ym_HandleSysMsg_RevokeMsg->
 
 // ym_HandleSysMsg_RevokeMsg 原函数里用来构造撤回 MessageWrap 的模板：unk_7861730
-static const uintptr_t kRevokeRawMessageTemplateVA = 0x7861730;
+static const uintptr_t kRevokeRawMessageTemplateVA = 0x7861730; //ym_HandleSysMsg_RevokeMsg->
 
 // sub_37FB284 / red_envelope_service_handler.cc 里用来构造本地系统消息的模板：unk_7969710
-static const uintptr_t kLocalSysMessageTemplateVA = 0x7969710;
+//static const uintptr_t kLocalSysMessageTemplateVA = 0x7969710;
 
 // MessageWrap 相关函数
-static const uintptr_t kMessageWrapInitVA          = 0x245CF20;
-static const uintptr_t kMessageWrapFromRawVA       = 0x4728670;
-static const uintptr_t kMessageWrapSetMsgTypeVA    = 0x472800C;
-static const uintptr_t kMessageWrapParseContentVA  = 0x4728618;
-static const uintptr_t kMessageWrapDestructVA      = 0x206F0D0;
+static const uintptr_t kMessageWrapFromRawVA       = 0x4728670;//ym_HandleSysMsg_RevokeMsg->
+static const uintptr_t kMessageWrapDestructVA      = 0x206F0D0;//ym_HandleSysMsg_RevokeMsg->
 // 现成的本地系统消息插入函数。
 // sub_3822FA4：内部会构造 type=10000 + paymsg XML，然后调用 ym_AddLocalMessageWrap。
-static const uintptr_t kInsertPaySysMsgToSessionVA = 0x3822FA4;
-
-// 从 sys_extinfo / MessageWrap 中拿 message service 的链路。
-// 这组来自 paymsg / red_envelope 插入本地系统消息的反编译逻辑。
-static const uintptr_t kSub413C7ACVA = 0x413C7AC;
-static const uintptr_t kSub3919E18VA = 0x3919E18;
-static const uintptr_t kSub2065A44VA = 0x2065A44;
-
-// 插入本地消息到聊天流 / 消息系统
-static const uintptr_t kAddLocalMessageWrapVA = 0x27AF630;
-
+static const uintptr_t kInsertPaySysMsgToSessionVA = 0x3822FA4;//[CDATA[->
 #pragma mark - 微信内部函数类型
 
-typedef void     (*YMMessageWrapInitFunc)(void *message);
 typedef void     (*YMMessageWrapFromRawFunc)(void *message, int64_t rawMessage);
-typedef void     (*YMMessageWrapSetMsgTypeFunc)(void *message, uint32_t msgType);
-typedef int64_t  (*YMMessageWrapParseContentFunc)(int64_t message, int flag);
 typedef void     (*YMMessageWrapDestructFunc)(int64_t message);
 
-typedef void     (*YMSub413C7ACFunc)(void *outSharedPtr, int64_t object);
-typedef void     (*YMSub3919E18Func)(void *outSharedPtr, void *inSharedPtr);
-typedef void     (*YMSub2065A44Func)(void *outSharedPtr, int64_t object);
 typedef int64_t (*YMInsertPaySysMsgToSessionFunc)(int64_t a1,
                                                   const std::string *session,
                                                   const std::string *content);
