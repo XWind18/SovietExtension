@@ -64,7 +64,7 @@ Uninstall / 卸载：
 ```
 请到 系统设置 → 隐私与安全性，给当前你运行脚本这个"终端"工具开启：
 1. 完整磁盘访问权限 / Full Disk Access
-2. App 管理 / App Management
+2. 文件与文件夹 / App Management
 ```
 ## Uninstall
 同理执行uninstall.sh即可
