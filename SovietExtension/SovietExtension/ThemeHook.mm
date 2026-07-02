@@ -337,7 +337,8 @@ static BOOL YMShouldSkipMistyEffectForWindow(NSWindow *window) {
         @"Menu",
         @"Popover",
         @"Tooltip",
-        @"TouchBar"
+        @"TouchBar",
+        @"QNSPanel"
     ];
     
     for (NSString *keyword in blockedKeywords) {
