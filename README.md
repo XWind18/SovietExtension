@@ -24,13 +24,16 @@
 ---
 
 ## Effect / 效果展示
-
 <p align="center">
-  <img src="./1.8.png" width="600" alt="SovietExtension Effect 1" />
+  <img src="./colorful.gif" width="1000" alt="SovietExtension Effect 1" />
 </p>
 
 <p align="center">
-  <img src="./1.9.png" width="600" alt="SovietExtension Effect 2" />
+  <img src="./1.8.png" width="1000" alt="SovietExtension Effect 1" />
+</p>
+
+<p align="center">
+  <img src="./1.9.png" width="1000" alt="SovietExtension Effect 2" />
 </p>
 
 <p align="center">
