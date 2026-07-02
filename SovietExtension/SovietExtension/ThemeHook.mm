@@ -227,8 +227,105 @@ static BOOL YMIsQNSView(NSView *view) {
     return [view isKindOfClass:qnsClass];
 }
 
+static void YMRestoreQNSViewForSkippedWindow(NSView *view) {
+    if (!view) return;
+
+    if ([view respondsToSelector:@selector(setAlphaValue:)]) {
+        view.alphaValue = 1.0;
+    }
+
+    if (view.layer) {
+        view.layer.opaque = NO;
+        view.layer.backgroundColor = NSColor.clearColor.CGColor;
+    }
+}
+
+static void YMRemoveColorfulBlurBackgroundViewsInTree(NSView *view) {
+    if (!view) return;
+
+    NSArray<NSView *> *subviews = [view.subviews copy];
+    for (NSView *subview in subviews) {
+        if ([subview.identifier isEqualToString:kYMColorfulBlurBackgroundViewIdentifier]) {
+            [subview removeFromSuperview];
+            continue;
+        }
+
+        YMRemoveColorfulBlurBackgroundViewsInTree(subview);
+    }
+}
+
+static void YMRestoreQNSViewsForSkippedWindowInTree(NSView *view) {
+    if (!view) return;
+
+    if (YMIsQNSView(view)) {
+        YMRestoreQNSViewForSkippedWindow(view);
+    }
+
+    NSArray<NSView *> *subviews = [view.subviews copy];
+    for (NSView *subview in subviews) {
+        YMRestoreQNSViewsForSkippedWindowInTree(subview);
+    }
+}
+
+static void YMCleanupMistyArtifactsForSkippedWindow(NSWindow *window) {
+    if (!window || !window.contentView) return;
+
+    YMRemoveColorfulBlurBackgroundViewsInTree(window.contentView);
+    YMRestoreQNSViewsForSkippedWindowInTree(window.contentView);
+}
+
 
 #pragma mark - 工具：窗口过滤
+
+static BOOL YMTextContainsAnyKeyword(NSString *text, NSArray<NSString *> *keywords) {
+    if (text.length == 0 || keywords.count == 0) {
+        return NO;
+    }
+
+    for (NSString *keyword in keywords) {
+        if (keyword.length == 0) {
+            continue;
+        }
+
+        if ([text rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) {
+            return YES;
+        }
+    }
+
+    return NO;
+}
+
+static NSString *YMWindowInspectionText(NSWindow *window) {
+    if (!window) {
+        return @"";
+    }
+
+    NSMutableString *text = [NSMutableString string];
+
+    NSString *className = NSStringFromClass(window.class);
+    if (className.length > 0) {
+        [text appendFormat:@"%@ ", className];
+    }
+
+    if (window.title.length > 0) {
+        [text appendFormat:@"%@ ", window.title];
+    }
+
+    // QNSWindow 的 description 里会带出 Qt 的 QWidgetWindow name，
+    // 例如：name="PreviewWindow_xxxWindow"。这是过滤图片预览窗口最稳定的特征。
+    NSString *windowDescription = window.description;
+    if (windowDescription.length > 0) {
+        [text appendFormat:@"%@ ", windowDescription];
+    }
+
+    NSString *contentViewDescription = window.contentView.description;
+    if (contentViewDescription.length > 0) {
+        [text appendFormat:@"%@ ", contentViewDescription];
+    }
+
+    return text;
+}
+
 static BOOL YMShouldSkipMistyEffectForWindow(NSWindow *window) {
     if (!window) {
         return YES;
@@ -247,6 +344,20 @@ static BOOL YMShouldSkipMistyEffectForWindow(NSWindow *window) {
         if ([className rangeOfString:keyword options:NSCaseInsensitiveSearch].location != NSNotFound) {
             return YES;
         }
+    }
+
+    NSString *inspectionText = YMWindowInspectionText(window);
+    NSArray<NSString *> *blockedQtWindowNameKeywords = @[
+        // 聊天图片预览窗口
+        @"PreviewWindow",
+        //个人资料
+        @"ProfileUniquePopClassWindow",
+        //表情包
+        @"EmoticonPopoverWindow",
+    ];
+
+    if (YMTextContainsAnyKeyword(inspectionText, blockedQtWindowNameKeywords)) {
+        return YES;
     }
 
     // AppKit 的菜单 / 状态栏相关窗口常见窗口层级。
@@ -437,6 +548,8 @@ static void YMInstallBlurBackgroundBehindQNSView(NSView *qnsView) {
         // 只跳过 macOS 顶部状态栏图标、菜单、popover 等附属窗口。
         // 不跳过登录窗口，避免登录界面的迷离效果失效。
         if (!YMShouldApplyMistyEffectForWindow(window)) {
+            YMCleanupMistyArtifactsForSkippedWindow(window);
+            YMRestoreQNSViewForSkippedWindow(qnsView);
             return;
         }
 
@@ -497,6 +610,7 @@ static void YMRefreshAllWindows(void) {
 
     for (NSWindow *window in NSApp.windows) {
         if (!YMShouldApplyMistyEffectForWindow(window)) {
+            YMCleanupMistyArtifactsForSkippedWindow(window);
             continue;
         }
 
@@ -577,9 +691,14 @@ static void YM_QNSView_setLayer(id self, SEL _cmd, id layer) {
         NSView *view = (NSView *)self;
         NSWindow *window = view.window;
 
-        if (!window || YMShouldApplyMistyEffectForWindow(window)) {
+        // window 还没绑定时不要提前改透明度。
+        // 图片预览窗口的 QNSView 可能先 setLayer、后绑定到 PreviewWindow；
+        // 如果这里在 window == nil 时先改 alpha，后面即使过滤 PreviewWindow，也会造成图片预览发虚。
+        if (window && YMShouldApplyMistyEffectForWindow(window)) {
             YMMakeViewTransparent(view);
             YMInstallBlurBackgroundBehindQNSViewAsync(view);
+        } else if (window) {
+            YMRestoreQNSViewForSkippedWindow(view);
         }
     }
 }
